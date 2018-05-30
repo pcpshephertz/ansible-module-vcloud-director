@@ -100,3 +100,8 @@ class VappVmPowerOffError(Exception):
 class VappUpdateError(Exception):
     def __init__(self, msg):
         Exception.__init__(self, msg)
+
+class ItemFoundError(Exception):
+    def __init__(self, msg):
+        Exception.__init__(self, msg)        
+        
