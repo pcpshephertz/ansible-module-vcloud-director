@@ -101,7 +101,11 @@ class VappUpdateError(Exception):
     def __init__(self, msg):
         Exception.__init__(self, msg)
 
-class ItemFoundError(Exception):
+class CatalogItemNotFoundError(Exception):
     def __init__(self, msg):
-        Exception.__init__(self, msg)        
+        Exception.__init__(self, msg)  
+
+class CatalogItemNotResolvedError(Exception):
+    def __init__(self, msg):
+        Exception.__init__(self, msg)       
         

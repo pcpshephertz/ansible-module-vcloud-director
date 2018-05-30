@@ -114,13 +114,14 @@ from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.client import Client
 from ansible.module_utils.vcd import VcdAnsibleModule
 from ansible.module_utils.vcd_errors import VDCNotFoundError
-from ansible.module_utils.vcd_errors import ItemFoundError
+from ansible.module_utils.vcd_errors import CatalogItemNotFoundError
+from ansible.module_utils.vcd_errors import CatalogItemNotResolvedError
 from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.client import QueryResultFormat
 import time
 
 VCD_CATALOG_ITEM_STATES = ['present', 'absent']
-VCD_CATALOG_ITEM_OPERATIONS = ['capturevapp', 'checkpresent']
+VCD_CATALOG_ITEM_OPERATIONS = ['capturevapp', 'checkitempresent', 'uploadova', 'uploadmedia', 'capturevapp', 'deleteitem', 'ovacheckresolved']
 
 
 def vcd_catalog_item_argument_spec():
@@ -183,6 +184,8 @@ class CatalogItem(object):
         response['msg'] = 'Catalog media item {} uploaded in catalog {}.'.format(item_name, catalog_name)
         response['changed'] = True
 
+        return response
+
     def upload_ova(self):
         catalog_name = self.module.params.get('catalog_name')
         item_name = self. module.params.get('item_name')
@@ -193,11 +196,14 @@ class CatalogItem(object):
         org = self.get_org_object()
 
         result = org.upload_ovf(
-            catalog_name=catalog_name,
-            file_name=file_name,
-            item_name=item_name) 
+            catalog_name = catalog_name,
+            file_name = file_name,
+            item_name = item_name) 
         response['msg'] = 'Catalog ova item {} uploaded in catalog {}.'.format(item_name, catalog_name)
         response['changed'] = True
+
+        return response
+
 
 
     def delete(self):
@@ -211,6 +217,8 @@ class CatalogItem(object):
         org.delete_catalog_item(name=catalog_name, item_name=item_name)
         response['msg'] = 'Catalog item {} deleted from catalog {}.'.format(item_name, catalog_name)
         response['changed'] = True
+
+        return response
 
 
     def capture_vapp(self):
@@ -243,24 +251,36 @@ class CatalogItem(object):
         response['msg'] = 'Vapp {} captured successfully for catalog_name {}, item_name {}.'.format(vapp_name, catalog_name, item_name)
         response['changed'] = True    
 
+        return response
 
 
-    def check_resolved(self, source_ova_item):
+
+
+    def check_resolved(self, source_ova_item, catalog_name, item_name):
         client = self.module.client
         item_id = source_ova_item.get('id')
-
+       
+        max_try = 10
+        attempt = 0
+       
         while True:
             q = client.get_typed_query(
                 'catalogItem',
                 query_result_format = QueryResultFormat.ID_RECORDS,
                 qfilter = 'id==%s' % item_id
                 )
+            
             records = list(q.execute())
+            
             if records[0].get('status') == 'RESOLVED':
                 break
+            elif attempt >= max_try:
+                err_msg = "catalog_item {} not resolved for catalog {}, exceeded max_try limit={}.".format(item_name, catalog_name, max_try)
+                raise CatalogItemNotResolvedError(err_msg)
             else:
                 time.sleep(5)
-                 #TODO might have to check when status goes to other state than resolved
+                attempt = attempt + 1
+                #TODO might have to check when status goes to other state than resolved
 
 
 
@@ -275,11 +295,14 @@ class CatalogItem(object):
         source_ova_item = org.get_catalog_item(catalog_name, item_name)
         if source_ova_item is None: 
             err_msg = "catalog_item {} not found for catalog {}.".format(item_name, catalog_name)
-            raise ItemFoundError(err_msg)
+            raise CatalogItemNotFoundError(err_msg)
         
-        self.check_resolved(source_ova_item)
-        response['msg'] = 'successfully uploaded/captured ova for catalog_name {}, item_name {}.'.format(catalog_name, item_name)
+        self.check_resolved(source_ova_item, catalog_name, item_name)
+        response['msg'] = 'successfully uploaded/captured ova/media for catalog_name {}, item_name {}.'.format(catalog_name, item_name)
         response['changed'] = True 
+
+        return response
+
 
 
 def manage_operations(catalog_item):
@@ -298,7 +321,10 @@ def manage_operations(catalog_item):
         return catalog_item.capture_vapp()
 
     if operation == "checkitempresent":   
-        return catalog_item.delete() 
+        return catalog_item.is_present() 
+    
+    if operation == "ovacheckresolved":   
+        return catalog_item.ova_check_resolved()
 
 def main():
     argument_spec = vcd_catalog_item_argument_spec()
