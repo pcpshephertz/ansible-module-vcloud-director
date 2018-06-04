@@ -262,8 +262,8 @@ class CatalogItem(object):
         client = self.module.client
         item_id = source_ova_item.get('id')
        
-        max_try = 20
-        attempt = 0
+        # max_try = 20
+        # attempt = 0
        
         while True:
             q = client.get_typed_query(
@@ -281,7 +281,7 @@ class CatalogItem(object):
             #     raise CatalogItemNotResolvedError(err_msg)
             else:
                 time.sleep(5)
-                attempt = attempt + 1
+                #attempt = attempt + 1
                 #TODO might have to check when status goes to other state than resolved
 
 
