@@ -99,6 +99,7 @@ result: success/failure message relates to pvdc operation/operations
 '''
 
 from ansible.module_utils.vcd import VcdAnsibleModule
+from pyvcloud.vcd.platform import Platform 
 
 
 VCD_PVDC_STATES = ['present', 'absent']
@@ -121,8 +122,34 @@ class PVDC(object):
     def __init__(self, module):
         self.module = module
 
-    def create(self):
+    def get_vdc_object(self):
         pass
+
+    def create(self):
+        client = self.module.client
+        params = self.module.params
+
+        vim_server_name = params.get('vim_server_name')
+        resource_pool_names = params.get('resource_pool_names')
+        storage_profiles = params.get('storage_profiles')
+        pvdc_name = params.get('pvdc_name')
+        is_enabled = params.get('is_enabled')
+        description = params.get('description')
+        highest_hw_vers = params.get('highest_hw_vers')
+        vxlan_network_pool = params.get('vxlan_network_pool')
+        nsxt_manager_name = params.get('nsxt_manager_name')
+
+        platform = Platform(client)
+        platform.create_provider_vdc(self,
+                            vim_server_name,
+                            resource_pool_names,
+                            storage_profiles,
+                            pvdc_name,
+                            is_enabled,
+                            description,
+                            highest_hw_vers,
+                            vxlan_network_pool,
+                            nsxt_manager_name)
 
     def read(self):
         pass
