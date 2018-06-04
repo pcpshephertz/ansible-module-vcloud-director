@@ -262,7 +262,7 @@ class CatalogItem(object):
         client = self.module.client
         item_id = source_ova_item.get('id')
        
-        max_try = 10
+        max_try = 20
         attempt = 0
        
         while True:
@@ -276,9 +276,9 @@ class CatalogItem(object):
             
             if records[0].get('status') == 'RESOLVED':
                 break
-            elif attempt >= max_try:
-                err_msg = "catalog_item {} not resolved for catalog {}, exceeded max_try limit={}.".format(item_name, catalog_name, max_try)
-                raise CatalogItemNotResolvedError(err_msg)
+            # elif attempt >= max_try:
+            #     err_msg = "catalog_item {} not resolved for catalog {}, exceeded max_try limit={}.".format(item_name, catalog_name, max_try)
+            #     raise CatalogItemNotResolvedError(err_msg)
             else:
                 time.sleep(5)
                 attempt = attempt + 1
