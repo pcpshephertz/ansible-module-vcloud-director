@@ -59,7 +59,7 @@ options:
         required: false
     file_name:
         description:
-            - name of the file
+            - name of the file 
         required: false
     vapp_name:
         description:
@@ -81,29 +81,31 @@ options:
         description:
             - if you want to customise vapp on instantiation
         required: false
-    state:
-        description:
-            - state of catalog item(media/ova) ('present'/'absent').
-            - One from state or operation has to be provided. 
-        required: false
+
     operation:
         description:
             - operation which should be performed over catalog.
             - various operations are: 
-                - capturevapp :capture vapp
-                - checkpresent : check if catalog item is present
-            - One from state or operation has to be provided.
-        required: false
+                - capturevapp           : capture vapp
+                - checkpresent          : check if catalog item is present
+                - 'uploadova'           : upload ova file
+                - 'uploadmedia'         : upload media file
+                - 'deleteitem'          : delete catalog item from catalog
+                - 'ovacheckresolved'    : check if catalog item is resolved
+            - Operation has to be provided.
+        required: true
 author:
     - pcpandey@mail.com
 '''
 
 EXAMPLES = '''
-- name: upload catalog media
-  vcd_catalog:
+- name: upload media
+  vcd_catalog_item:
     catalog_name: "{{ catalog_name }}"
     item_name: "{{ item_name }}"
-  register: output  
+    file_name : "{{ file_name }}"
+    operation: "uploadmedia"
+  register: output   
 '''
 
 RETURN = '''
@@ -121,7 +123,7 @@ from pyvcloud.vcd.client import QueryResultFormat
 import time
 
 VCD_CATALOG_ITEM_STATES = ['present', 'absent']
-VCD_CATALOG_ITEM_OPERATIONS = ['capturevapp', 'checkitempresent', 'uploadova', 'uploadmedia', 'capturevapp', 'deleteitem', 'ovacheckresolved']
+VCD_CATALOG_ITEM_OPERATIONS = ['capturevapp', 'checkitempresent', 'uploadova', 'uploadmedia', 'deleteitem', 'ovacheckresolved']
 
 
 def vcd_catalog_item_argument_spec():
