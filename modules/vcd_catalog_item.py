@@ -23,6 +23,7 @@ description:
         - Delete media
         - Delete ova
         - Capture vapp
+        - Check media item resolved
 options:
     user:
         description:
@@ -306,7 +307,7 @@ class CatalogItem(object):
 
 def manage_states(catalog_item):
     params = catalog_item.module.params
-    file_name = params.get('catalog_item')
+    file_name = params.get('file_name')
     state = params.get('state')
     
     if state == "present":
@@ -323,6 +324,7 @@ def manage_states(catalog_item):
 
 def manage_operations(catalog_item):
     operation = catalog_item.module.params.get('operation')
+    
     if operation == "capturevapp":   
         return catalog_item.capture_vapp()
 
