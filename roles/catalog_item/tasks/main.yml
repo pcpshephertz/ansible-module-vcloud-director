@@ -19,7 +19,7 @@
 
 - assert:
     that:
-      - "'Catalog media item {{ item_name }} uploaded in catalog {{ catalog_name }}.' in output.msg"
+      - "'Catalog item {{ item_name }} uploaded in catalog {{ catalog_name }}.' in output.msg"
 
 ############################################ delete-media ##############################################################
 - name: upload media
@@ -36,7 +36,7 @@
 
 - assert:
     that:
-      - "'Catalog item media {{ item_name }} is deleted from catalog {{ catalog_name }}.' in output.msg"
+      - "'Catalog item {{ item_name }} is deleted from catalog {{ catalog_name }}.' in output.msg"
 
 
 ############################################ upload-ova ##############################################################
@@ -54,7 +54,7 @@
 
 - assert:
     that:
-      - "'Catalog item ova {{ item_name }} is deleted from catalog {{ catalog_name }}.' in output.msg"
+      - "'Catalog item {{ item_name }} is uploaded in catalog {{ catalog_name }}.' in output.msg"
 
 ############################################ delete-ova ##############################################################
 - name: upload ova
@@ -71,7 +71,7 @@
 
 - assert:
     that:
-      - "'Catalog ova item {{ item_name }} uploaded in catalog {{ catalog_name }}.' in output.msg"
+      - "'Catalog item {{ item_name }} is deleted from catalog {{ catalog_name }}.' in output.msg"
 
 
 ############################################ ova-media-check-resolved ##############################################################

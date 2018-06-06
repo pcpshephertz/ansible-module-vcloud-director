@@ -184,7 +184,7 @@ class CatalogItem(object):
             org.upload_ovf(**item_details) 
         else:
             org.upload_media(**item_details) 
-        response['msg'] = 'Catalog item {} uploaded in catalog {}.'.format(item_name, catalog_name)
+        response['msg'] = 'Catalog item {} is uploaded in catalog {}.'.format(item_name, catalog_name)
         response['changed'] = True
 
         return response
