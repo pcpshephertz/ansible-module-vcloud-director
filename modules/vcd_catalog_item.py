@@ -127,7 +127,6 @@ import time
 VCD_CATALOG_ITEM_STATES = ['present', 'absent']
 VCD_CATALOG_ITEM_OPERATIONS = ['capturevapp', 'ovacheckresolved']
 
-
 def vcd_catalog_item_argument_spec():
     return dict(
         catalog_name=dict(type='str', required=True),
@@ -153,7 +152,6 @@ class CatalogItem(object):
 
         return org
 
-
     def is_present(self):
         catalog_name = self.module.params.get('catalog_name')
         item_name = self. module.params.get('item_name')
@@ -168,74 +166,40 @@ class CatalogItem(object):
 
         return present
 
-    def upload_media(self):
+    def upload(self):
         catalog_name = self.module.params.get('catalog_name')
         item_name = self.module.params.get('item_name')
         file_name = self.module.params.get('file_name')
+        item_details = {
+            "catalog_name" : catalog_name,
+            "item_name" : item_name,
+            "file_name" : file_name
+        }
         response = dict()
 
         if self.is_present():
-            raise Exception("The catalog media you are trying to upload is already present.")
+            raise Exception("The catalog item you are trying to upload is already present.")
         org = self.get_org_object()
-        org.upload_media(
-            catalog_name=catalog_name,
-            file_name=file_name,
-            item_name=item_name)
-        response['msg'] = 'Catalog media item {} uploaded in catalog {}.'.format(item_name, catalog_name)
+        if file_name.endswith(".ova"):
+            org.upload_ovf(**item_details) 
+        else:
+            org.upload_media(**item_details) 
+        response['msg'] = 'Catalog item {} uploaded in catalog {}.'.format(item_name, catalog_name)
         response['changed'] = True
 
         return response
-
-    def upload_ova(self):
-        catalog_name = self.module.params.get('catalog_name')
-        item_name = self. module.params.get('item_name')
-        file_name = self. module.params.get('file_name')  
-        response = dict()
-
-        if self.is_present():
-            raise Exception("The catalog ova you are trying to upload is already present.")
-        org = self.get_org_object()
-        result = org.upload_ovf(
-            catalog_name = catalog_name,
-            file_name = file_name,
-            item_name = item_name) 
-        response['msg'] = 'Catalog ova item {} uploaded in catalog {}.'.format(item_name, catalog_name)
-        response['changed'] = True
-
-        return response
-
-
-    def delete_media(self):
-        catalog_name = self.module.params.get('catalog_name')
-        item_name = self. module.params.get('item_name')
-        response = dict()
-
-        self.delete()
-        response['msg'] = 'Catalog item media {} is deleted from catalog {}.'.format(item_name, catalog_name)
-        response['changed'] = True
-
-        return response
-    
-    def delete_ova(self):
-        catalog_name = self.module.params.get('catalog_name')
-        item_name = self. module.params.get('item_name')
-        response = dict()
-
-        self.delete()
-        response['msg'] = 'Catalog item ova {} is deleted from catalog {}.'.format(item_name, catalog_name)
-        response['changed'] = True
-
-        return response
-
 
     def delete(self):
         catalog_name = self.module.params.get('catalog_name')
-        item_name = self. module.params.get('item_name')  
+        item_name = self. module.params.get('item_name')
+        response = dict()
 
         org = self.get_org_object()
         org.delete_catalog_item(name=catalog_name, item_name=item_name)
-        
+        response['msg'] = 'Catalog item {} is deleted from catalog {}.'.format(item_name, catalog_name)
+        response['changed'] = True
 
+        return response
 
     def capture_vapp(self):
         vapp_name = self.module.params.get('vapp_name')
@@ -263,9 +227,6 @@ class CatalogItem(object):
 
         return response
 
-
-
-
     def check_resolved(self, source_ova_item, catalog_name, item_name):
         client = self.module.client
         item_id = source_ova_item.get('id')
@@ -289,8 +250,6 @@ class CatalogItem(object):
                 #attempt = attempt + 1
                 #TODO might have to check when status goes to other state than resolved
 
-
-
     def ova_check_resolved(self):
         catalog_name = self.module.params.get('catalog_name')
         item_name = self.module.params.get('item_name')
@@ -304,23 +263,16 @@ class CatalogItem(object):
 
         return response
 
-
 def manage_states(catalog_item):
     params = catalog_item.module.params
     file_name = params.get('file_name')
     state = params.get('state')
     
     if state == "present":
-        if file_name.endswith(".ova"):
-            return catalog_item.upload_ova()
-        else:
-            return catalog_item.upload_media()
+        return catalog_item.upload()
 
     if state == "absent":
-        if file_name.endswith(".ova"):
-            return catalog_item.delete_ova()
-        else:
-            return catalog_item.delete_media()
+        return catalog_item.delete()
 
 def manage_operations(catalog_item):
     operation = catalog_item.module.params.get('operation')
@@ -355,7 +307,6 @@ def main():
         module.fail_json(**response)
 
     module.exit_json(**response)
-
 
 if __name__ == '__main__':
     main()
