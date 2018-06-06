@@ -10,7 +10,7 @@
     catalog_name: "{{ catalog_name }}"
     item_name: "{{ item_name }}"
     file_name : "{{ file_name }}"
-    operation: "uploadmedia"
+    state: "present"
   register: output
 
 - name: upload media output
@@ -21,6 +21,23 @@
     that:
       - "'Catalog media item {{ item_name }} uploaded in catalog {{ catalog_name }}.' in output.msg"
 
+############################################ delete-media ##############################################################
+- name: upload media
+  vcd_catalog_item:
+    catalog_name: "{{ catalog_name }}"
+    item_name: "{{ item_name }}"
+    file_name : "{{ file_name }}"
+    state: "absent"
+  register: output
+
+- name: upload media output
+  debug:
+    msg: '{{ output }}'  
+
+- assert:
+    that:
+      - "'Catalog item media {{ item_name }} is deleted from catalog {{ catalog_name }}.' in output.msg"
+
 
 ############################################ upload-ova ##############################################################
 - name: upload ova
@@ -28,7 +45,24 @@
     catalog_name: "{{ catalog_name }}"
     item_name: "{{ item_name }}"
     file_name : "{{ file_name }}"
-    operation: "uploadova"
+    state: "present"
+  register: output
+
+- name: upload media output
+  debug:
+    msg: '{{ output }}'  
+
+- assert:
+    that:
+      - "'Catalog item ova {{ item_name }} is deleted from catalog {{ catalog_name }}.' in output.msg"
+
+############################################ delete-ova ##############################################################
+- name: upload ova
+  vcd_catalog_item:
+    catalog_name: "{{ catalog_name }}"
+    item_name: "{{ item_name }}"
+    file_name : "{{ file_name }}"
+    state: "absent"
   register: output
 
 - name: upload media output
@@ -55,37 +89,6 @@
 - assert:
     that:
       - "'successfully uploaded/captured ova/media for catalog_name {{ catalog_name }}, item_name {{ item_name }}.' in output.msg"      
-
-############################################ check-item-present ##############################################################
-- name: check if catalog item present/absent
-  vcd_catalog_item:
-    catalog_name: "{{ catalog_name }}"
-    item_name: "{{ item_name }}"
-    operation: "checkitempresent"
-  register: output
-
-- name: upload media output
-  debug:
-    msg: '{{ output }}'  
-
-
-
-############################################ delete-catalog-item ##############################################################
-- name: delete catalog item
-  vcd_catalog_item:
-    catalog_name: "{{ catalog_name }}"
-    item_name: "{{ item_name }}"
-    operation: "deleteitem"
-  register: output
-
-- name: delete catalog item output
-  debug:
-    msg: '{{ output }}'  
-
-- assert:
-    that:
-      - "'Catalog item {{ item_name }} deleted from catalog {{ catalog_name }}.' in output.msg"
-
 
 ############################################ capture-vapp ##############################################################
 - name: capture vapp

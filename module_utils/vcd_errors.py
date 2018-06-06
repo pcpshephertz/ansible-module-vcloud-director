@@ -100,12 +100,5 @@ class VappVmPowerOffError(Exception):
 class VappUpdateError(Exception):
     def __init__(self, msg):
         Exception.__init__(self, msg)
-
-class CatalogItemNotFoundError(Exception):
-    def __init__(self, msg):
-        Exception.__init__(self, msg)  
-
-class CatalogItemNotResolvedError(Exception):
-    def __init__(self, msg):
-        Exception.__init__(self, msg)       
+      
         

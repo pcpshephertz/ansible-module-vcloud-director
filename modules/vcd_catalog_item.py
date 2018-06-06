@@ -13,17 +13,16 @@ ANSIBLE_METADATA = {
 DOCUMENTATION = '''
 ---
 client: catalog_item
-short_description: catalog_item module for performing CRUD operation in vCloud Director
+short_description: Catalog_Item Module to manage catalog_item operations through vCloud Director
 version_added: "2.4"
 description:
     - This module is to [upload, read, delete] ova/media, capture vapp in vCloud Director.
     - Task performed:
         - Upload media 
-        - Upload OVA
+        - Upload ova
         - Delete media
         - Delete ova
         - Capture vapp
-        - Read if catalog item present
 options:
     user:
         description:
@@ -64,7 +63,7 @@ options:
     vapp_name:
         description:
             - name of the vapp
-        required: true
+        required: false
     vdc_name:
         description:
             - name of the vdc
@@ -81,19 +80,24 @@ options:
         description:
             - if you want to customise vapp on instantiation
         required: false
-
+    state:
+        description:
+            - state of catalog_item ('present'/'absent').
+            - used for
+                - 'uploadova'           : upload ova file
+                - 'deleteova'           : delete ova file
+                - 'uploadmedia'         : upload media file
+                - 'deletemedia'         : delete media file
+            - One of operation/state has to be provided.
+        required: false
     operation:
         description:
             - operation which should be performed over catalog.
-            - various operations are: 
-                - capturevapp           : capture vapp
-                - checkpresent          : check if catalog item is present
-                - 'uploadova'           : upload ova file
-                - 'uploadmedia'         : upload media file
-                - 'deleteitem'          : delete catalog item from catalog
+            - various operations
+                - 'capturevapp'         : capture vapp
                 - 'ovacheckresolved'    : check if catalog item is resolved
-            - Operation has to be provided.
-        required: true
+            - One of operation/state has to be provided.
+        required: false
 author:
     - pcpandey@mail.com
 '''
@@ -115,15 +119,12 @@ result: success/failure message relates to catalog operation/operations
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.client import Client
 from ansible.module_utils.vcd import VcdAnsibleModule
-from ansible.module_utils.vcd_errors import VDCNotFoundError
-from ansible.module_utils.vcd_errors import CatalogItemNotFoundError
-from ansible.module_utils.vcd_errors import CatalogItemNotResolvedError
 from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.client import QueryResultFormat
 import time
 
 VCD_CATALOG_ITEM_STATES = ['present', 'absent']
-VCD_CATALOG_ITEM_OPERATIONS = ['capturevapp', 'checkitempresent', 'uploadova', 'uploadmedia', 'deleteitem', 'ovacheckresolved']
+VCD_CATALOG_ITEM_OPERATIONS = ['capturevapp', 'ovacheckresolved']
 
 
 def vcd_catalog_item_argument_spec():
@@ -155,30 +156,26 @@ class CatalogItem(object):
     def is_present(self):
         catalog_name = self.module.params.get('catalog_name')
         item_name = self. module.params.get('item_name')
-        
-        response = dict()
+        present = False
 
         org = self.get_org_object()
-
         try:
             catalog = org.get_catalog_item(catalog_name, item_name)
-            response['msg'] = 'Catalog item {} is present in catalog {}.'.format(item_name, catalog_name)
-            response['changed'] = False
+            present = True
         except Exception as e:
-            response['msg'] = 'Catalog item {} is not present in catalog {}.'.format(item_name, catalog_name)
-            response['changed'] = False
+            pass
 
-        return response
+        return present
 
     def upload_media(self):
         catalog_name = self.module.params.get('catalog_name')
-        item_name = self. module.params.get('item_name')
-        file_name = self. module.params.get('file_name')
-
+        item_name = self.module.params.get('item_name')
+        file_name = self.module.params.get('file_name')
         response = dict()
 
+        if self.is_present():
+            raise Exception("The catalog media you are trying to upload is already present.")
         org = self.get_org_object()
-
         org.upload_media(
             catalog_name=catalog_name,
             file_name=file_name,
@@ -192,11 +189,11 @@ class CatalogItem(object):
         catalog_name = self.module.params.get('catalog_name')
         item_name = self. module.params.get('item_name')
         file_name = self. module.params.get('file_name')  
-
         response = dict()
 
+        if self.is_present():
+            raise Exception("The catalog ova you are trying to upload is already present.")
         org = self.get_org_object()
-
         result = org.upload_ovf(
             catalog_name = catalog_name,
             file_name = file_name,
@@ -207,20 +204,36 @@ class CatalogItem(object):
         return response
 
 
-
-    def delete(self):
+    def delete_media(self):
         catalog_name = self.module.params.get('catalog_name')
-        item_name = self. module.params.get('item_name')   
-
+        item_name = self. module.params.get('item_name')
         response = dict()
 
-        org = self.get_org_object()
-
-        org.delete_catalog_item(name=catalog_name, item_name=item_name)
-        response['msg'] = 'Catalog item {} deleted from catalog {}.'.format(item_name, catalog_name)
+        self.delete()
+        response['msg'] = 'Catalog item media {} is deleted from catalog {}.'.format(item_name, catalog_name)
         response['changed'] = True
 
         return response
+    
+    def delete_ova(self):
+        catalog_name = self.module.params.get('catalog_name')
+        item_name = self. module.params.get('item_name')
+        response = dict()
+
+        self.delete()
+        response['msg'] = 'Catalog item ova {} is deleted from catalog {}.'.format(item_name, catalog_name)
+        response['changed'] = True
+
+        return response
+
+
+    def delete(self):
+        catalog_name = self.module.params.get('catalog_name')
+        item_name = self. module.params.get('item_name')  
+
+        org = self.get_org_object()
+        org.delete_catalog_item(name=catalog_name, item_name=item_name)
+        
 
 
     def capture_vapp(self):
@@ -231,16 +244,10 @@ class CatalogItem(object):
         desc = self.module.params.get('description')
         customize_on_instantiate = self.module.params.get('customize_on_instantiate')
         client = self.module.client
-
         response = dict()
 
         org = self.get_org_object()
-
         v = org.get_vdc(vdc_name)
-        if v is None:
-            err_msg = "VDC {} not found.".format(vdc_name)
-            raise VDCNotFoundError(err_msg)
-
         vdc = VDC(client, href=v.get('href'))
         vapp = vdc.get_vapp(vapp_name)   
         catalog = org.get_catalog(catalog_name)
@@ -261,7 +268,6 @@ class CatalogItem(object):
     def check_resolved(self, source_ova_item, catalog_name, item_name):
         client = self.module.client
         item_id = source_ova_item.get('id')
-       
         # max_try = 20
         # attempt = 0
        
@@ -271,14 +277,12 @@ class CatalogItem(object):
                 query_result_format = QueryResultFormat.ID_RECORDS,
                 qfilter = 'id==%s' % item_id
                 )
-            
             records = list(q.execute())
-            
             if records[0].get('status') == 'RESOLVED':
                 break
             # elif attempt >= max_try:
             #     err_msg = "catalog_item {} not resolved for catalog {}, exceeded max_try limit={}.".format(item_name, catalog_name, max_try)
-            #     raise CatalogItemNotResolvedError(err_msg)
+            #     raise Exception(err_msg)
             else:
                 time.sleep(5)
                 #attempt = attempt + 1
@@ -289,16 +293,10 @@ class CatalogItem(object):
     def ova_check_resolved(self):
         catalog_name = self.module.params.get('catalog_name')
         item_name = self.module.params.get('item_name')
-
         response = dict()
 
         org = self.get_org_object()
-
         source_ova_item = org.get_catalog_item(catalog_name, item_name)
-        if source_ova_item is None: 
-            err_msg = "catalog_item {} not found for catalog {}.".format(item_name, catalog_name)
-            raise CatalogItemNotFoundError(err_msg)
-        
         self.check_resolved(source_ova_item, catalog_name, item_name)
         response['msg'] = 'successfully uploaded/captured ova/media for catalog_name {}, item_name {}.'.format(catalog_name, item_name)
         response['changed'] = True 
@@ -306,25 +304,28 @@ class CatalogItem(object):
         return response
 
 
+def manage_states(catalog_item):
+    params = catalog_item.module.params
+    file_name = params.get('catalog_item')
+    state = params.get('state')
+    
+    if state == "present":
+        if file_name.endswith(".ova"):
+            return catalog_item.upload_ova()
+        else:
+            return catalog_item.upload_media()
+
+    if state == "absent":
+        if file_name.endswith(".ova"):
+            return catalog_item.delete_ova()
+        else:
+            return catalog_item.delete_media()
 
 def manage_operations(catalog_item):
     operation = catalog_item.module.params.get('operation')
-
-    if (operation == "uploadmedia"):
-        return catalog_item.upload_media()
-   
-    if operation == "uploadova":
-        return catalog_item.upload_ova()
-        
-    if operation == "deleteitem":   
-        return catalog_item.delete()  
-
     if operation == "capturevapp":   
         return catalog_item.capture_vapp()
 
-    if operation == "checkitempresent":   
-        return catalog_item.is_present() 
-    
     if operation == "ovacheckresolved":   
         return catalog_item.ova_check_resolved()
 
@@ -341,10 +342,12 @@ def main():
     
     try:
         catalog_item = CatalogItem(module)
-        if module.params.get('operation'):
+        if module.params.get('state'):
+            response = manage_states(catalog_item)
+        elif module.params.get('operation'):
             response = manage_operations(catalog_item)
         else:
-            raise Exception('operation should be provided.')
+            raise Exception('One of state/operation should be provided.')
     except Exception as error:
         response['msg'] = error.__str__()
         module.fail_json(**response)
